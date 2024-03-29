@@ -55,7 +55,7 @@ def version_in_aur(pkg):
         if r['Name'] == pkg:
             return r['Version']
 
-    return "NotFound"
+    return None
 
 
 def vcs_version(pkg, ver):
@@ -105,22 +105,34 @@ for pkg in packages.split('\n'):
     pkg, ver = pkg.split()
     installed_version[pkg] = ver
 
+print(json.dumps(installed_version))
+exit()
+
 updates = []
+pkgNotFound = []
 for pkg in installed_version.keys():
     if pkg in args.ignore:
         continue
     v_aur = version_in_aur(pkg)
     v_inst = installed_version[pkg]
+
+    if v_aur is None:
+        pkgNotFound.append(pkg)
+    
     if vcs_version(pkg, v_aur) != vcs_version(pkg, v_inst):
         updates.append(pkg + ' (%s -> %s)' % (v_inst, v_aur))
 
 # create the message for the block
 n_updates = len(updates)
+n_notFound = len(pkgNotFound)
 msg = ''
 if n_updates > 0:
     msg = "<span color='{0}'>{1} AUR updates</span>".format(args.update_color, n_updates)
 elif not args.quiet:
     msg = 'AUR up to date'
+
+if n_notFound > 0:
+    sp.call(['notify-send', 'AUR updates', '\n'.join(updates) or 'up to date'])
 
 # turn it into a json message
 msg = {'full_text': msg}
